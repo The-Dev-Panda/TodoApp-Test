@@ -18,12 +18,12 @@ def register_new_user(
     db: Session = Depends(get_db)
 ):
     """
-    Register a new user account.
+    Register a new user.
     Required: name, email, password
     Optional: phone_number
     New users are created as regular users (not admin).
     """
-    # Step 1: Check if email already exists
+    # Check if email exists
     existing_user = crud.get_user_by_email(db, user_data.email)
     if existing_user:
         raise HTTPException(
@@ -31,7 +31,7 @@ def register_new_user(
             detail="Email already registered"
         )
     
-    # Step 2: Create the new user
+    # Step 2: Create new user
     new_user = crud.create_user(db, user_data, is_admin=False)
     
     return new_user
@@ -46,6 +46,7 @@ def login_with_email_password(
     Login with email and password (JSON format).
     Returns a JWT access token.
     Use this token in the Authorization header: Bearer <token>
+    IN SWAGGER BEARER PARAMETER IS MISSING IF USING OAUTH 
     
     Example:
     {
@@ -82,22 +83,22 @@ def login_for_swagger(
     db: Session = Depends(get_db)
 ):
     """
-    OAuth2 compatible login endpoint for Swagger UI.
-    Use the /login endpoint for programmatic access (it accepts JSON).
+    OAuth2 login endpoint for Swagger docs.
+    Use the /login endpoint for programming access (JSON).
     
-    In Swagger: click "Authorize" button, enter your email as 'username' and password.
+    Swagger: click "Authorize", enter your email as 'username' and password.
     """
-    # Step 1: Find user by email (form sends 'username' field, we treat it as email)
+    # Step 1: Find user by email (sends 'username', treat it as email)
     user = crud.get_user_by_email(db, form_data.username)
     
-    # Step 2: Verify password
+    # Verify password
     if not user or not auth.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect email or password"
         )
     
-    # Step 3: Create access token
+    # Create access token
     token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
         data={"sub": str(user.id)},
